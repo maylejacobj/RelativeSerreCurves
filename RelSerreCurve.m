@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////
 // All of our code was run on a machine with the
-// following specificiations.
+// following specifications.
 // CPU: 2.9 GHz 6-Core Intel Core i9
 // Memory: 32 GB 2400 MHz DDR4
 // OS: macOS Montery Version 12.5.1
@@ -13,10 +13,17 @@
 // available online at 
 // https://github.com/AndrewVSutherland/ell-adic-galois-images.
 /////////////////////////////////////////////////
-ChangeDirectory("ell-adic-galois-images-main");
+ChangeDirectory("/Users/.../ell-adic-galois-images-main");
 Attach("groups/gl2.m");
 load "groups/gl2data.m";
 RSZB := GL2Load(0);
+
+/////////////////////////////////////////////////
+// Below we load "galrep" by Sutherland, which is
+// available at https://math.mit.edu/~drew/galrep
+/////////////////////////////////////////////////
+ChangeDirectory("/Users/.../galrep");
+load "galrep.m";
 
 /////////////////////////////////////////////////
 // Given a positive integer n, output GL(2,Z/nZ).
@@ -118,7 +125,7 @@ end function;
 // > LevelLower2(TwoB(72));
 // 36	// Warning: This computation is slow. It
 //      // took us about 2 hours to complete on
-//      // the marchine specified above.
+//      // the machine specified above.
 /////////////////////////////////////////////////
 LevelLower2 := function(G)
 	n := #BaseRing(G);
@@ -728,4 +735,287 @@ GenerateTable := function()
         Out;
     end for;
     return "";
+end function;
+
+/////////////////////////////////////////////////
+// Example 5.1: Computes the adelic Galois image
+// of the elliptic curve E with LMFDB label
+// 315.a2. The image conductor of of E is 420.
+// The function outputs G_E(420). The output
+// agrees with Zywina's (available on the LMFDB)
+// up to conjugation in GL(2,Z/420Z). Note that
+// the generators of the output group are random.
+/////////////////////////////////////////////////
+// > AdelicImageExample1();
+// MatrixGroup(2, IntegerRing(420)) of order 2^15 * 3^4 * 5 * 7
+// Generators:
+//    [ 69 298]
+//    [134   7]
+//
+//    [113 360]
+//    [142 359]
+//
+//    [261  82]
+//    [398  53]
+//
+//    [355  46]
+//    [142 111]
+/////////////////////////////////////////////////
+AdelicImageExample1 := function();
+
+	R<x> := PolynomialRing(Rationals());
+	E := EllipticCurve("315b2");
+	E := WeierstrassModel(E);
+	B :=TorsionBasis(WeierstrassModel(E),4);
+	A:=TorsionPoints(B,4);
+	K<alpha> := Parent(B[1][1]);
+	G,S,phi:=AutomorphismGroup(K);
+	
+	L := Subfields(K,2);
+	NPrimes := [-3,5,-7];
+	QuadFlds := [RationalsAsNumberField(),RationalsAsNumberField(),RationalsAsNumberField()];
+	Alphas := [One(K),One(K),One(K)];
+	for F in L do
+		for i in [1,2,3] do
+			if #Roots(x^2-NPrimes[i],F[1]) gt 0 then
+				QuadFlds[i] := F[1];
+				Alphas[i] := Roots(x^2-NPrimes[i],F[1])[1][1];
+			end if;
+		end for;
+	end for;
+
+	Gs := [[],[],[]];
+	for i in [1,2,3] do
+		for g in G do
+			f := phi(g);
+			if f(Alphas[i]) eq Alphas[i] then
+				Include(~Gs[i],g);
+			end if;
+		end for;
+	end for;
+	Gs := [sub<G|Gs[i]> : i in [1,2,3]]; 
+
+	Hs := [sub<GL(2,Integers(4))|[SigmaMatrix(phi(g),B,A,4): g in Generators(Gs[i])]> : i in [1,2,3]];
+	H := sub<GL(2,Integers(4))|[SigmaMatrix(phi(g),B,A,4): g in Generators(G)]>;
+
+	pi4 := Red(420,4);
+	pi3 := Red(420,3);
+	pi5 := Red(420,5);
+	pi7 := Red(420,7);
+
+	Q1, epsilon1 := H/Hs[1];
+	Q2, epsilon2 := H/Hs[2];
+	Q3, epsilon3 := H/Hs[3];
+
+	T1, chi1 := Gl(3)/LowIndexSubgroups(Gl(3),2)[1];
+	T2, chi2 := Gl(5)/LowIndexSubgroups(Gl(5),2)[1];
+	T3, chi3 := Gl(7)/LowIndexSubgroups(Gl(7),2)[1];
+
+	G420 := H @@ pi4;
+	S := {};
+	Snew := {};
+	SG := sub<G420|[]>;
+	Sz := 0;
+	Sznew := 0;
+	while true do
+		g := Random(G420);
+		if epsilon1(pi4(g)) eq chi1(pi3(g)) and epsilon2(pi4(g)) eq chi2(pi5(g)) and epsilon3(pi4(g)) eq chi3(pi7(g)) then
+			SGnew := sub<G420|Include(S,g)>;
+			Sznew := #SGnew;
+			if Sznew gt Sz then
+				Include(~S,g);
+				SG := SGnew;
+				Sz := Sznew;
+				if Index(G420,SG) eq 8 then
+					return SG;
+				end if;
+			end if;
+		end if;
+	end while;
+end function;
+
+/////////////////////////////////////////////////
+// Example 5.2: Computes the adelic Galois image
+// of the elliptic curve E with LMFDB label
+// 69.a1. The image conductor of of E is 276.
+// The function outputs G_E(276). The output
+// agrees with Zywina's (available on the LMFDB)
+// up to conjugation in GL(2,Z/276Z). Note that
+// the generators of the output group are random.
+/////////////////////////////////////////////////
+// > AdelicImageExample2();
+// MatrixGroup(2, IntegerRing(276)) of order 2^12 * 3^2 * 11^2 * 23
+// Generators:
+//    [207  64]
+//    [166 177]
+//
+//    [ 63  50]
+//    [217 143]
+//
+//    [ 59 272]
+//    [265 225]
+/////////////////////////////////////////////////
+AdelicImageExample2 := function();
+
+	R<x> := PolynomialRing(Rationals());
+	E := EllipticCurve("69a2");
+	E := WeierstrassModel(E);
+	B :=TorsionBasis(WeierstrassModel(E),4);
+	A:=TorsionPoints(B,4);
+	K<alpha> := Parent(B[1][1]);
+	G,S,phi:=AutomorphismGroup(K);
+
+	L := Subfields(K,2);
+	NPrimes := [-23,-3];
+	QuadFlds := [RationalsAsNumberField(),RationalsAsNumberField()];
+	Alphas := [One(K),One(K)];
+	for F in L do
+		for i in [1,2] do
+			if #Roots(x^2-NPrimes[i],F[1]) gt 0 then
+				QuadFlds[i] := F[1];
+				Alphas[i] := Roots(x^2-NPrimes[i],F[1])[1][1];
+			end if;
+		end for;
+	end for;
+	
+	Gs := [[],[]];
+	for i in [1,2] do
+		for g in G do
+			f := phi(g);
+			if f(Alphas[i]) eq Alphas[i] then
+				Include(~Gs[i],g);
+			end if;
+		end for;
+	end for;
+	Gs := [sub<G|Gs[i]> : i in [1,2]]; 
+
+	Hs := [sub<GL(2,Integers(4))|[SigmaMatrix(phi(g),B,A,4): g in Generators(Gs[i])]> : i in [1,2]];
+	H := sub<GL(2,Integers(4))|[SigmaMatrix(phi(g),B,A,4): g in Generators(G)]>;
+
+	pi4 := Red(276,4);
+	pi23 := Red(276,23);
+	pi3 := Red(276,3);
+
+	Q1, epsilon1 := H/Hs[1];
+	Q2, epsilon2 := H/Hs[2];
+
+	T1, chi1 := Gl(23)/LowIndexSubgroups(Gl(23),2)[1];
+	T2, chi2 := Gl(3)/LowIndexSubgroups(Gl(3),2)[1];
+
+	G276 := H @@ pi4;
+	S := {};
+	Snew := {};
+	SG := sub<G276|[]>;
+	Sz := 0;
+	Sznew := 0;
+	while true do
+		g := Random(G276);
+		if epsilon1(pi4(g)) eq chi1(pi23(g)) and epsilon2(pi4(g)) eq chi2(pi3(g)) then
+			SGnew := sub<G276|Include(S,g)>;
+			Sznew := #SGnew;
+			if Sznew gt Sz then
+				Include(~S,g);
+				SG := SGnew;
+				Sz := Sznew;
+				if Index(G276,SG) eq 4 then
+					return SG;
+				end if;
+			end if;
+		end if;
+	end while;
+end function;
+
+/////////////////////////////////////////////////
+// Example 5.3: Computes the adelic Galois image
+// of the elliptic curve E with LMFDB label
+// 392.a1. The image conductor of of E is 28.
+// The function outputs G_E(28). The output
+// agrees with Zywina's (available on the LMFDB)
+// up to conjugation in GL(2,Z/28Z). Note that
+// the generators of the output group are random.
+/////////////////////////////////////////////////
+// > AdelicImageExample3();
+//    MatrixGroup(2, IntegerRing(28)) of order 2^8 * 3^2 * 7
+//    Generators:
+//        [16 27]
+//        [19  9]
+//
+//        [16 19]
+//        [25  9]
+/////////////////////////////////////////////////
+AdelicImageExample3 := function();
+
+	R<x> := PolynomialRing(Rationals());
+	E := EllipticCurve("392f1");
+	E := WeierstrassModel(E);
+	B :=TorsionBasis(WeierstrassModel(E),4);
+	A:=TorsionPoints(B,4);
+	K<alpha> := Parent(B[1][1]);
+	G,S,phi:=AutomorphismGroup(K);
+	
+	SDEPrime := -7;
+	L := Subfields(K,2);
+	for F in L do
+		if #Roots(x^2-SDEPrime,F[1]) gt 0 then
+			QuadFld := F[1]; 
+		end if;
+	end for;
+	Alpha := Roots(x^2-SDEPrime,QuadFld)[1][1];
+
+	G1 := [];
+	for g in G do
+		f := phi(g);
+		if f(Alpha) eq Alpha then
+			Include(~G1,g);
+		end if;
+	end for;
+	G1 := sub<G|G1>;
+
+	H := sub<GL(2,Integers(4))|[SigmaMatrix(phi(g),B,A,4): g in Generators(G)]>;
+	H1 := sub<GL(2,Integers(4))|[SigmaMatrix(phi(g),B,A,4): g in Generators(G1)]>;
+	H2 := LowIndexSubgroups(H,3)[1]; // Unique index 3 subgroup
+
+	pi4 := Red(28,4);
+	pi7 := Red(28,7);
+
+	Q1, epsilon := H/H1;
+	Q2, omega := H/H2;
+
+	T1, chi := Gl(7)/LowIndexSubgroups(Gl(7),2)[1]; // Unique index 2 subgroup
+	T2, xi := Gl(7)/LowIndexSubgroups(Gl(7),3)[1]; // Unique index 3 subgroup
+
+	G28 := H @@ pi4;
+	L := [];
+	for i in [1,2] do
+		S := {};
+		Snew := {};
+		SG := sub<G28|[]>;
+		Sz := 0;
+		Sznew := 0;
+		while true do
+			g := Random(G28);
+			if epsilon(pi4(g)) eq chi(pi7(g)) and omega(pi4(g)) eq xi(pi7(g))^i then
+				SGnew := sub<G28|Include(S,g)>;
+				Sznew := #SGnew;
+				if Sznew gt Sz then
+					Include(~S,g);
+					SG := SGnew;
+					Sz := Sznew;
+					if Index(G28,SG) eq 6 then
+						Include(~L,SG);
+						break;
+					end if;
+				end if;
+			end if;
+		end while;
+	end for;
+
+	a3 := TraceOfFrobenius(E,3);
+	f := x^2 - a3 * x + 3;
+	if not f in {CharacteristicPolynomial(g) : g in L[2]} then
+		return L[1];
+	end if;
+	if not f in {CharacteristicPolynomial(g) : g in L[1]} then
+		return L[2];
+	end if;
 end function;
