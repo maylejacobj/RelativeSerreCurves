@@ -426,28 +426,37 @@ IsRelSerreCurve := function(E)
 end function;
 
 /////////////////////////////////////////////////
-// Given a set S an a positive integer n, output
-// n minimal elements of S with respect to
-// divisibility that are not 1 or 2.
+// Given a set S and a positive integer n, output
+// the n elements of S as described in 
+// Example 3.3 and the preceding paragraph. 
 //////////////////// EXAMPLE ////////////////////
 // > S := { 3, 5, 7, 15, 21, 35, 105 };
-// > MinWrtDiv(S,3);
-// { 3, 5, 7 }
+// > MinElts(S,3);
+// [ 3, 5, 7 ]
+// > S := { 15, 33, 55, 57, 95, 209, 3135 };
+// > MinElts(S,3);
+// [ 15, 33, 57 ]
 /////////////////////////////////////////////////
-MinWrtDiv := function(S,n)
-	T := {};
+MinElts := function(S,n)
+	L := [];
 	Exclude(~S,1);
 	Exclude(~S,2);
-	for k in [1..n] do
-		m := Minimum(S);
-		Include(~T,m);
-		for s in S do
-			if s mod m eq 0 then
-				Exclude(~S,s);
-			end if;
-		end for;
-	end for;
-	return T;
+	Include(~L,Minimum(S));
+	Exclude(~S,Minimum(S));
+	if n ge 2 then
+		while Minimum(S) mod L[1] eq 0 do
+			Exclude(~S,Minimum(S));
+		end while;
+		Include(~L,Minimum(S));
+		Exclude(~S,Minimum(S));
+	end if;
+	if n eq 3 then
+		while (Minimum(S) mod L[1] eq 0) or (Minimum(S) mod L[2] eq 0) or (Minimum(S) mod Squarefree(L[1] * L[2]) eq 0) do
+			Exclude(~S,Minimum(S));
+		end while;
+		Include(~L,Minimum(S));
+	end if;
+	return L;
 end function;
 
 /////////////////////////////////////////////////
@@ -502,7 +511,7 @@ ImgCondCs := function(E)
 	S := {Asf,Bsf,Csf,ABsf,ACsf,BCsf,ABCsf};
 	TwoAdicGroup := GL2EllAdicImages(E,RSZB)[1];
 	if TwoAdicGroup in ["2.6.0.1"] then
-		L := [x : x in MinWrtDiv(S,3)];
+		L := MinElts(S,3);
 		N1 := L[1];
 		N2 := L[2];
 		N3 := L[3];
@@ -516,7 +525,7 @@ ImgCondCs := function(E)
 		end if;
 	end if;
 	if TwoAdicGroup in ["8.12.0.2","4.12.0.2","8.12.0.1","4.12.0.1","8.12.0.3","8.12.0.4"] then
-		L := [x : x in MinWrtDiv(S,2)];
+		L := MinElts(S,2);
 		N1 := L[1];
 		N2 := L[2];
 		N1Prime := NPrime(N1);
@@ -528,7 +537,7 @@ ImgCondCs := function(E)
 		end if;
 	end if;
 	if TwoAdicGroup in ["8.24.0.5","8.24.0.7","8.24.0.2","8.24.0.1","8.24.0.6","8.24.0.8","8.24.0.3","8.24.0.4"] then
-		L := [x : x in MinWrtDiv(S,1)];
+		L := MinElts(S,1);
 		N1 := L[1];
 		N1Prime := NPrime(N1);
 		return LCM([8,AbsoluteValue(NPrime(N1))]);
@@ -567,7 +576,7 @@ ImgCondB := function(E)
 	S := {Xsf,Ysf,XYsf}; 
 	TwoAdicGroup := GL2EllAdicImages(E,RSZB)[1];
 	if TwoAdicGroup eq "2.3.0.1" then
-		L := [x : x in MinWrtDiv(S,2)];
+		L := MinElts(S,2);
 		N1 := L[1];
 		N2 := L[2];
 		N1Prime := NPrime(N1);
@@ -578,7 +587,7 @@ ImgCondB := function(E)
 			return LCM([8,AbsoluteValue(NPrime(N1)),AbsoluteValue(NPrime(N2))]);
 		end if;
 	else
-		L := [x : x in MinWrtDiv(S,1)];
+		L := MinElts(S,1);
 		N1 := L[1];
 		N1Prime := NPrime(N1);
 		return LCM([8,AbsoluteValue(NPrime(N1))]);
